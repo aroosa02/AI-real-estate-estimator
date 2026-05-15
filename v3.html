@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EstimAI — Property Value Estimator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{--bg:#f7f5f0;--surface:#ffffff;--surface2:#f0ede6;--border:#e0dbd0;--text:#1a1714;--muted:#6b6560;--accent:#b8965a;--accent-light:#f5ead8;--accent-dark:#8a6d3e;--danger:#c0392b;--success:#1a7f5a;--shadow:rgba(0,0,0,0.06);--radius:12px;--radius-lg:18px;--transition:0.3s cubic-bezier(0.4,0,0.2,1);}
+[data-theme="dark"]{--bg:#111009;--surface:#1c1a16;--surface2:#252219;--border:#332f26;--text:#f0ece3;--muted:#9a9082;--accent:#c9a86c;--accent-light:#2a2315;--accent-dark:#e8c98a;--shadow:rgba(0,0,0,0.4);}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);transition:background var(--transition),color var(--transition);min-height:100vh;overflow-x:hidden;}
+#trailCanvas{position:fixed;top:0;left:0;pointer-events:none;z-index:9999;width:100%;height:100%;}
+.topbar{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:60px;background:var(--surface);border-bottom:1px solid var(--border);backdrop-filter:blur(12px);transition:background var(--transition);}
+.logo{font-family:'DM Serif Display',serif;font-size:1.4rem;letter-spacing:-0.5px;color:var(--text);display:flex;align-items:center;gap:8px;}
+.logo-dot{color:var(--accent);}
+.topbar-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.lang-select{font-family:'DM Sans',sans-serif;font-size:13px;border:1px solid var(--border);border-radius:8px;padding:5px 10px;background:var(--surface2);color:var(--text);cursor:pointer;outline:none;transition:border-color 0.2s;}
+.lang-select:hover{border-color:var(--accent);}
+.theme-btn{width:38px;height:38px;border-radius:50%;border:1px solid var(--border);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;transition:all 0.2s;color:var(--text);}
+.theme-btn:hover{border-color:var(--accent);transform:rotate(20deg);}
+.hero{position:relative;width:100%;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:340px;padding:0;}
+.hero-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;}
+.hero-overlay{position:absolute;inset:0;background:rgba(10,9,6,0.52);z-index:1;}
+.hero-content{position:relative;z-index:2;padding:120px 2rem 70px;text-align:center;max-width:800px;margin:0 auto;}
+.hero-tag{display:inline-block;font-size:12px;font-weight:500;letter-spacing:2px;text-transform:uppercase;color:#d4aa6a;background:rgba(184,150,90,0.18);border:1px solid rgba(184,150,90,0.35);padding:5px 14px;border-radius:100px;margin-bottom:1.5rem;animation:fadeUp 0.6s ease both;}
+.hero h1{font-family:'DM Serif Display',serif;font-size:clamp(2.2rem,5vw,3.5rem);line-height:1.15;letter-spacing:-1px;color:#f0ece3;margin-bottom:1rem;animation:fadeUp 0.7s ease both 0.1s;}
+.hero h1 em{color:#c9a86c;font-style:italic;}
+.hero p{font-size:1.05rem;color:#b0a89a;line-height:1.7;animation:fadeUp 0.7s ease both 0.2s;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
+.main{max-width:1100px;margin:0 auto;padding:0 1.5rem 4rem;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 4px 24px var(--shadow);transition:background var(--transition),border-color var(--transition);}
+.section-gap{margin-bottom:1.5rem;}
+.estimator-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;}
+@media(max-width:700px){.estimator-grid{grid-template-columns:1fr;}}
+.form-card{padding:2rem;}
+.section-label{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:1.5rem;display:flex;align-items:center;gap:8px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+.field{margin-bottom:1.5rem;}
+.field label{display:block;font-size:13px;font-weight:500;color:var(--muted);margin-bottom:6px;}
+.field select,.field input[type="number"]{width:100%;padding:10px 14px;font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);outline:none;transition:border-color 0.2s,box-shadow 0.2s;}
+.field select:focus,.field input[type="number"]:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(184,150,90,0.15);}
+.field input.invalid{border-color:var(--danger)!important;box-shadow:0 0 0 3px rgba(192,57,43,0.12)!important;}
+.type-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.type-btn{padding:8px 4px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:11px;font-weight:500;cursor:pointer;text-align:center;transition:all 0.15s;font-family:'DM Sans',sans-serif;}
+.type-btn:hover{border-color:var(--accent);color:var(--accent);}
+.type-btn.active{border-color:var(--accent);background:var(--accent-light);color:var(--accent-dark);font-weight:600;}
+.type-icon{font-size:1.2rem;display:block;margin-bottom:3px;}
+.stepper{display:flex;align-items:center;gap:12px;}
+.stepper-btn{width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;user-select:none;font-weight:300;}
+.stepper-btn:hover{border-color:var(--accent);color:var(--accent);}
+.stepper-val{font-size:1.5rem;font-weight:600;min-width:32px;text-align:center;color:var(--text);}
+.slider-row{display:flex;align-items:center;gap:12px;}
+.slider-row input[type="range"]{flex:1;-webkit-appearance:none;appearance:none;height:5px;border-radius:3px;background:linear-gradient(to right,var(--accent) 0%,var(--accent) var(--val,0%),var(--border) var(--val,0%));outline:none;cursor:pointer;}
+.slider-row input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:var(--accent);border:3px solid var(--surface);box-shadow:0 0 0 2px var(--accent);transition:transform 0.15s;cursor:grab;}
+.slider-row input[type="range"]::-webkit-slider-thumb:active{transform:scale(1.25);cursor:grabbing;}
+.slider-val{font-size:15px;font-weight:600;min-width:28px;text-align:center;color:var(--accent);}
+.form-actions{display:flex;gap:8px;margin-top:0.5rem;}
+.reset-btn{flex:1;padding:10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all 0.2s;}
+.reset-btn:hover{border-color:var(--danger);color:var(--danger);}
+.share-btn{padding:10px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+.share-btn:hover{border-color:var(--accent);color:var(--accent);}
+.result-card{padding:2rem;display:flex;flex-direction:column;justify-content:space-between;}
+.result-placeholder{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--muted);gap:12px;padding:2rem 0;}
+.result-placeholder .icon{font-size:3rem;opacity:0.25;}
+.result-content{display:none;flex-direction:column;flex:1;}
+.result-content.active{display:flex;}
+.price-label{font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;}
+.price-value{font-family:'DM Serif Display',serif;font-size:clamp(2rem,4vw,2.8rem);color:var(--text);letter-spacing:-1px;margin-bottom:1.5rem;min-height:1.2em;transition:all 0.3s;}
+.breakdown{display:flex;flex-direction:column;gap:8px;margin-bottom:1.5rem;}
+.breakdown-item{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:8px 12px;border-radius:8px;background:var(--surface2);}
+.breakdown-item .b-label{color:var(--muted);}
+.breakdown-item .b-val{font-weight:600;color:var(--text);}
+.breakdown-item.positive .b-val{color:var(--success);}
+.breakdown-item.negative .b-val{color:var(--danger);}
+.city-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;background:var(--accent-light);color:var(--accent-dark);padding:4px 10px;border-radius:100px;margin-bottom:1.2rem;}
+.result-actions{display:flex;gap:8px;margin-bottom:10px;}
+.summary-btn{flex:1;padding:13px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;}
+.summary-btn:not(:disabled):hover{background:var(--accent-dark);transform:translateY(-1px);box-shadow:0 6px 20px rgba(184,150,90,0.35);}
+.summary-btn:disabled{background:var(--border);color:var(--muted);cursor:not-allowed;}
+.save-compare-btn{padding:13px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+.save-compare-btn:hover{border-color:var(--accent);color:var(--accent);}
+.chart-card{padding:2rem;}
+.chart-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:10px;}
+.chart-title{font-size:15px;font-weight:600;color:var(--text);}
+.chart-legend{display:flex;gap:16px;}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);}
+.legend-dot{width:10px;height:10px;border-radius:50%;}
+.chart-wrap{position:relative;height:220px;}
+/* Insights strip */
+.insights-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:1rem;margin-bottom:1.5rem;}
+.insight-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;box-shadow:0 4px 24px var(--shadow);transition:transform 0.2s,box-shadow 0.2s;}
+.insight-card:hover{transform:translateY(-2px);box-shadow:0 8px 32px var(--shadow);}
+.insight-icon{font-size:1.4rem;margin-bottom:6px;}
+.insight-label{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+.insight-val{font-size:1.3rem;font-weight:700;color:var(--text);margin-bottom:2px;}
+.insight-sub{font-size:11px;color:var(--muted);}
+/* Listings */
+.listings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-top:1rem;}
+.listing-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;transition:border-color 0.2s,transform 0.2s;}
+.listing-card:hover{border-color:var(--accent);transform:translateY(-2px);}
+.listing-img{width:100%;height:72px;border-radius:8px;background:var(--accent-light);display:flex;align-items:center;justify-content:center;font-size:1.8rem;margin-bottom:10px;}
+.listing-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;}
+.listing-detail{font-size:11px;color:var(--muted);margin-bottom:6px;}
+.listing-price{font-size:14px;font-weight:700;color:var(--accent);}
+.listing-badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:100px;margin-bottom:5px;}
+.badge-similar{background:var(--accent-light);color:var(--accent-dark);}
+.badge-cheaper{background:#e8f5f0;color:var(--success);}
+.badge-pricier{background:#fde8e8;color:var(--danger);}
+[data-theme="dark"] .badge-cheaper{background:#0d2e1f;color:#4caf8a;}
+[data-theme="dark"] .badge-pricier{background:#2e0d0d;color:#e07070;}
+/* Mortgage */
+.mortgage-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media(max-width:600px){.mortgage-grid{grid-template-columns:1fr;}}
+.mort-field label{font-size:13px;color:var(--muted);font-weight:500;display:block;margin-bottom:6px;}
+.mort-field input{width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color 0.2s;}
+.mort-field input:focus{border-color:var(--accent);}
+.mortgage-result{background:var(--accent-light);border:1px solid var(--accent);border-radius:var(--radius);padding:1rem;margin-top:1rem;}
+.mort-res-label{font-size:12px;color:var(--accent-dark);font-weight:600;margin-bottom:4px;}
+.mort-res-val{font-size:1.6rem;font-weight:700;color:var(--accent);font-family:'DM Serif Display',serif;}
+.mort-res-sub{font-size:12px;color:var(--muted);margin-top:4px;}
+/* ROI */
+.roi-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:0.5rem;}
+.roi-table th{text-align:left;color:var(--muted);font-weight:600;font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:6px 10px;border-bottom:1px solid var(--border);}
+.roi-table td{padding:8px 10px;border-bottom:1px solid var(--border);}
+.roi-table tr:last-child td{border-bottom:none;}
+.roi-table tr:hover td{background:var(--surface2);}
+.roi-positive{color:var(--success);font-weight:600;}
+.roi-rate-field{display:flex;align-items:center;gap:10px;margin-bottom:1rem;}
+.roi-rate-field label{font-size:13px;color:var(--muted);font-weight:500;white-space:nowrap;}
+.roi-rate-field input{width:80px;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;}
+/* Depreciation */
+.dep-chart-wrap{position:relative;height:200px;margin-top:0.5rem;}
+/* Benchmark */
+.benchmark-wrap{margin-top:0.5rem;}
+.bench-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.bench-city{font-size:12px;color:var(--muted);width:80px;flex-shrink:0;text-align:right;}
+.bench-bar-bg{flex:1;height:10px;border-radius:5px;background:var(--surface2);overflow:hidden;}
+.bench-bar-fill{height:100%;border-radius:5px;background:var(--accent);transition:width 0.6s cubic-bezier(0.4,0,0.2,1);}
+.bench-bar-fill.user-bar{background:var(--success);}
+.bench-val{font-size:11px;font-weight:600;color:var(--text);min-width:55px;}
+/* Affordability */
+.afford-salary-field{display:flex;align-items:center;gap:10px;margin-bottom:1rem;}
+.afford-salary-field label{font-size:13px;color:var(--muted);white-space:nowrap;}
+.afford-salary-field input{width:140px;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;}
+.afford-months{font-family:'DM Serif Display',serif;font-size:2rem;color:var(--text);margin-bottom:4px;}
+.afford-sub{font-size:13px;color:var(--muted);margin-bottom:1rem;}
+.afford-bar-wrap{margin:0.5rem 0;}
+.afford-label-row{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px;}
+.afford-bar-bg{height:14px;border-radius:7px;background:var(--surface2);overflow:hidden;}
+.afford-bar-fill{height:100%;border-radius:7px;transition:width 0.6s cubic-bezier(0.4,0,0.2,1);}
+/* Compare */
+.compare-wrap{overflow-x:auto;margin-top:0.5rem;}
+.compare-table{width:100%;border-collapse:collapse;font-size:13px;min-width:480px;}
+.compare-table th{text-align:left;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--border);}
+.compare-table td{padding:10px 12px;border-bottom:1px solid var(--border);}
+.compare-table tr:last-child td{border-bottom:none;}
+.compare-table tr:hover td{background:var(--surface2);}
+.compare-table .highlight{color:var(--accent);font-weight:600;}
+.compare-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px;}
+.compare-del:hover{color:var(--danger);}
+.compare-empty{text-align:center;color:var(--muted);font-size:13px;padding:2rem;font-style:italic;}
+/* History */
+.history-list{display:flex;flex-direction:column;gap:8px;margin-top:0.5rem;max-height:280px;overflow-y:auto;}
+.history-item{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;transition:border-color 0.15s;}
+.history-item:hover{border-color:var(--accent);}
+.hist-left .hist-city{font-size:13px;font-weight:600;color:var(--text);}
+.hist-left .hist-detail{font-size:11px;color:var(--muted);}
+.hist-right .hist-price{font-size:13px;font-weight:700;color:var(--accent);}
+.hist-right .hist-time{font-size:10px;color:var(--muted);text-align:right;}
+.hist-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;margin-left:10px;}
+.hist-del:hover{color:var(--danger);}
+.hist-empty{text-align:center;color:var(--muted);font-size:13px;padding:1.5rem;font-style:italic;}
+/* Tabs */
+.tabs{display:flex;gap:4px;padding:4px;background:var(--surface2);border-radius:10px;margin-bottom:1.5rem;flex-wrap:wrap;}
+.tab-btn{padding:8px 14px;border-radius:7px;border:none;background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+.tab-btn.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px var(--shadow);font-weight:600;}
+/* Modal */
+.modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;padding:1.5rem;opacity:0;pointer-events:none;transition:opacity 0.3s;backdrop-filter:blur(4px);}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);width:100%;max-width:540px;max-height:90vh;overflow-y:auto;transform:scale(0.95) translateY(20px);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);box-shadow:0 32px 80px rgba(0,0,0,0.25);}
+.modal-overlay.open .modal{transform:scale(1) translateY(0);}
+.modal-header{display:flex;justify-content:space-between;align-items:center;padding:1.5rem 1.75rem;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1;}
+.modal-title{font-family:'DM Serif Display',serif;font-size:1.4rem;color:var(--text);}
+.close-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;color:var(--muted);font-size:18px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+.close-btn:hover{border-color:var(--danger);color:var(--danger);}
+.modal-body{padding:1.75rem;}
+.modal-section{margin-bottom:2rem;}
+.modal-section-title{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:1rem;display:flex;align-items:center;gap:8px;}
+.modal-section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.tax-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:14px;}
+.tax-row:nth-child(odd){background:var(--surface2);}
+.tax-row .t-label{color:var(--muted);}
+.tax-row .t-val{font-weight:600;color:var(--text);}
+.tax-row.total{background:var(--accent-light);margin-top:10px;}
+.tax-row.total .t-label{color:var(--accent-dark);font-weight:600;}
+.tax-row.total .t-val{color:var(--accent);}
+.currency-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.currency-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center;transition:border-color 0.2s;}
+.currency-card:hover{border-color:var(--accent);}
+.currency-flag{font-size:1.6rem;margin-bottom:6px;}
+.currency-code{font-size:11px;font-weight:600;letter-spacing:1px;color:var(--muted);text-transform:uppercase;}
+.currency-amount{font-size:1.1rem;font-weight:700;color:var(--text);margin-top:4px;}
+.modal-footer{display:flex;gap:10px;padding:1.25rem 1.75rem;border-top:1px solid var(--border);position:sticky;bottom:0;background:var(--surface);flex-wrap:wrap;}
+.btn-pdf{flex:1;padding:12px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;transition:all 0.2s;}
+.btn-pdf:hover{background:var(--accent-dark);}
+.btn-whatsapp{padding:12px 14px;border-radius:var(--radius);border:1px solid #25D366;background:transparent;color:#25D366;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+.btn-whatsapp:hover{background:#25D366;color:#fff;}
+.btn-close-modal{flex:1;padding:12px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:all 0.2s;}
+.qr-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;}
+#qrcode{background:#fff;padding:10px;border-radius:8px;display:inline-block;}
+.footer{text-align:center;padding:2rem;font-size:13px;color:var(--muted);border-top:1px solid var(--border);}
+[dir="rtl"] body{direction:rtl;}
+[dir="rtl"] .section-label::before,[dir="rtl"] .modal-section-title::before{content:'';flex:1;height:1px;background:var(--border);}
+[dir="rtl"] .section-label::after,[dir="rtl"] .modal-section-title::after{display:none;}
+/* Toast */
+.toast-container{position:fixed;bottom:24px;right:24px;z-index:500;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+.toast{padding:12px 18px;border-radius:10px;font-size:13px;font-weight:500;color:#fff;pointer-events:all;transform:translateX(120%);transition:transform 0.35s cubic-bezier(0.4,0,0.2,1);max-width:280px;line-height:1.4;}
+.toast.show{transform:translateX(0);}
+.toast.success{background:#1a7f5a;}
+.toast.error{background:#c0392b;}
+.toast.info{background:#b8965a;}
+/* Confetti */
+.confetti-particle{position:fixed;pointer-events:none;z-index:9998;width:8px;height:8px;border-radius:2px;animation:confettiFall linear forwards;}
+@keyframes confettiFall{0%{transform:translateY(-20px) rotate(0deg);opacity:1;}100%{transform:translateY(100vh) rotate(720deg);opacity:0;}}
+@media print{.topbar,.theme-btn,.lang-select,.summary-btn,.save-compare-btn,.form-actions,.tabs,.modal-overlay,#trailCanvas,.toast-container{display:none!important;}.card{box-shadow:none!important;border:1px solid #ccc!important;}body{background:#fff!important;color:#000!important;}}
+.fade-in{animation:fadeUp 0.5s ease both;}
+.stagger-1{animation-delay:0.05s;}
+.stagger-2{animation-delay:0.1s;}
+.stagger-3{animation-delay:0.15s;}
+.stagger-4{animation-delay:0.2s;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(184,150,90,0.3);}50%{box-shadow:0 0 0 8px rgba(184,150,90,0);}}
+</style>
+</head>
+<body>
+<canvas id="trailCanvas"></canvas>
+
+<header class="topbar">
+  <div class="logo">EstimAI<span class="logo-dot">.</span></div>
+  <div class="topbar-right">
+    <select class="lang-select" id="langSelect" onchange="setLang(this.value)">
+      <option value="en">🌐 English</option>
+      <option value="ur">اردو</option>
+      <option value="zh">中文</option>
+      <option value="ar">عربي</option>
+    </select>
+    <button class="theme-btn" onclick="toggleTheme()" title="Toggle theme" id="themeBtn">🌙</button>
+  </div>
+</header>
+
+<section class="hero">
+  <video class="hero-video" autoplay muted loop playsinline>
+    <source src="headervideo.mp4" type="video/mp4"/>
+  </video>
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <div class="hero-tag" data-i18n="heroTag">AI-Powered Estimation</div>
+    <h1 data-i18n="heroH1">Find your property's <em>true value</em></h1>
+    <p data-i18n="heroP">Real-time estimates for Pakistan's property market. Instant breakdown, tax summary, and PDF export.</p>
+  </div>
+</section>
+
+<main class="main">
+  <div class="estimator-grid">
+    <div class="card form-card fade-in stagger-1">
+      <div class="section-label" data-i18n="propertyDetails">Property Details</div>
+      <div class="field">
+        <label data-i18n="propType">Property Type</label>
+        <div class="type-grid">
+          <button class="type-btn active" data-type="house" onclick="setType(this)"><span class="type-icon">🏠</span>House</button>
+          <button class="type-btn" data-type="apartment" onclick="setType(this)"><span class="type-icon">🏢</span>Apartment</button>
+          <button class="type-btn" data-type="plot" onclick="setType(this)"><span class="type-icon">🌿</span>Plot</button>
+          <button class="type-btn" data-type="commercial" onclick="setType(this)"><span class="type-icon">🏪</span>Commercial</button>
+        </div>
+      </div>
+      <div class="field">
+        <label data-i18n="city">City / Area</label>
+        <select id="city" onchange="calculate()">
+          <optgroup label="Islamabad"><option value="Islamabad_F7">F-7 / F-8 Islamabad</option><option value="Islamabad_DHA">DHA Islamabad</option><option value="Islamabad_G11">G-11 / G-13 Islamabad</option></optgroup>
+          <optgroup label="Lahore"><option value="Lahore_DHA">DHA Lahore</option><option value="Lahore_Gulberg">Gulberg Lahore</option><option value="Lahore_Bahria">Bahria Town Lahore</option></optgroup>
+          <optgroup label="Karachi"><option value="Karachi_DHA">DHA Karachi</option><option value="Karachi_Clifton">Clifton Karachi</option></optgroup>
+          <optgroup label="Other Cities"><option value="Rawalpindi">Rawalpindi</option><option value="Peshawar">Peshawar</option><option value="Faisalabad">Faisalabad</option><option value="Multan">Multan</option><option value="Quetta">Quetta</option></optgroup>
+        </select>
+      </div>
+      <div class="field">
+        <label data-i18n="size">Property Size (Marla)</label>
+        <input type="number" id="size" min="1" max="1000" value="10" step="0.5" oninput="calculate()"/>
+      </div>
+      <div class="field">
+        <label data-i18n="bedrooms">Bedrooms</label>
+        <div class="stepper">
+          <button class="stepper-btn" onclick="step('beds',-1)">−</button>
+          <span class="stepper-val" id="bedsVal">3</span>
+          <button class="stepper-btn" onclick="step('beds',1)">+</button>
+        </div>
+      </div>
+      <div class="field">
+        <label data-i18n="bathrooms">Bathrooms</label>
+        <div class="stepper">
+          <button class="stepper-btn" onclick="step('baths',-1)">−</button>
+          <span class="stepper-val" id="bathsVal">2</span>
+          <button class="stepper-btn" onclick="step('baths',1)">+</button>
+        </div>
+      </div>
+      <div class="field">
+        <label data-i18n="propAge">Property Age (Years): <span id="ageDisplay" style="color:var(--accent);font-weight:600;">5</span></label>
+        <div class="slider-row">
+          <span style="font-size:12px;color:var(--muted);">0</span>
+          <input type="range" id="age" min="0" max="50" value="5" step="1" oninput="document.getElementById('ageDisplay').textContent=this.value;updateSlider(this);calculate()"/>
+          <span style="font-size:12px;color:var(--muted);">50</span>
+          <span class="slider-val" id="ageSliderVal">5</span>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="reset-btn" onclick="resetForm()">↺ Reset All</button>
+        <button class="share-btn" onclick="shareLink()">🔗 Share Link</button>
+      </div>
+    </div>
+
+    <div class="card result-card fade-in stagger-2">
+      <div id="placeholder" class="result-placeholder">
+        <div class="icon">🏡</div>
+        <p style="font-size:14px;" data-i18n="placeholderText">Adjust the inputs to see your estimated property value</p>
+      </div>
+      <div id="resultContent" class="result-content">
+        <div class="price-label" data-i18n="estimatedValue">Estimated Value</div>
+        <div class="price-value" id="priceDisplay">₨ 0</div>
+        <div id="cityBadge" class="city-badge">📍 <span id="cityName">Islamabad</span></div>
+        <div class="breakdown" id="breakdown"></div>
+        <div class="result-actions">
+          <button class="summary-btn" id="summaryBtn" disabled onclick="openModal()" data-i18n="viewSummary">View Detailed Summary</button>
+          <button class="save-compare-btn" onclick="saveToCompare()" title="Save to Compare">📌 Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INSIGHTS STRIP -->
+  <div class="insights-strip fade-in stagger-3" id="insightsStrip" style="display:none;">
+    <div class="insight-card"><div class="insight-icon">🏘️</div><div class="insight-label">Price / Marla</div><div class="insight-val" id="iPPM">—</div><div class="insight-sub" id="iPPMsub">vs city avg</div></div>
+    <div class="insight-card"><div class="insight-icon">💰</div><div class="insight-label">Est. Monthly Rent</div><div class="insight-val" id="iRent">—</div><div class="insight-sub" id="iYield">— annual yield</div></div>
+    <div class="insight-card"><div class="insight-icon">📅</div><div class="insight-label">Affordability</div><div class="insight-val" id="iMonths">—</div><div class="insight-sub">months of avg salary</div></div>
+    <div class="insight-card"><div class="insight-icon">📈</div><div class="insight-label">5-Year Projection</div><div class="insight-val" id="i5yr">—</div><div class="insight-sub">at 8% annual growth</div></div>
+  </div>
+
+  <!-- CHART -->
+  <div class="card chart-card fade-in stagger-3 section-gap">
+    <div class="chart-header">
+      <div class="chart-title" data-i18n="chartTitle">Price Breakdown Analysis</div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#b8965a;"></div><span data-i18n="landCost">Land Cost</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#1a7f5a;"></div><span data-i18n="constructionVal">Construction Value</span></div>
+      </div>
+    </div>
+    <div class="chart-wrap"><canvas id="myChart"></canvas></div>
+  </div>
+
+  <!-- FEATURE TABS -->
+  <div class="card fade-in stagger-4 section-gap" style="padding:1.5rem 2rem;">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="showTab('comparable',this)">🏘️ Comparable</button>
+      <button class="tab-btn" onclick="showTab('mortgage',this)">💳 Mortgage</button>
+      <button class="tab-btn" onclick="showTab('roi',this)">📈 ROI</button>
+      <button class="tab-btn" onclick="showTab('depreciation',this)">📉 Depreciation</button>
+      <button class="tab-btn" onclick="showTab('benchmark',this)">🗺️ Benchmark</button>
+      <button class="tab-btn" onclick="showTab('affordability',this)">🏦 Affordability</button>
+      <button class="tab-btn" onclick="showTab('compare',this)">⚖️ Compare</button>
+      <button class="tab-btn" onclick="showTab('history',this)">🕐 History</button>
+    </div>
+
+    <div id="tab-comparable">
+      <div class="section-label">Similar Properties Nearby</div>
+      <div class="listings-grid" id="listingsGrid"><div class="compare-empty">Run an estimate first to see comparable listings.</div></div>
+    </div>
+    <div id="tab-mortgage" style="display:none;">
+      <div class="section-label">Mortgage Calculator</div>
+      <div class="mortgage-grid">
+        <div class="mort-field"><label>Down Payment (%)</label><input type="number" id="downPct" value="20" min="5" max="90" oninput="calcMortgage()"/></div>
+        <div class="mort-field"><label>Loan Term (Years)</label><input type="number" id="loanYears" value="20" min="1" max="30" oninput="calcMortgage()"/></div>
+        <div class="mort-field"><label>Annual Interest Rate (%)</label><input type="number" id="interestRate" value="18" min="1" max="40" step="0.5" oninput="calcMortgage()"/></div>
+        <div class="mort-field"><label>Property Value (auto)</label><input type="number" id="mortPropVal" readonly style="opacity:0.6;"/></div>
+      </div>
+      <div class="mortgage-result"><div class="mort-res-label">Monthly Installment</div><div class="mort-res-val" id="mortMonthly">—</div><div class="mort-res-sub" id="mortSub">Run an estimate first.</div></div>
+    </div>
+    <div id="tab-roi" style="display:none;">
+      <div class="section-label">Investment ROI Projection</div>
+      <div class="roi-rate-field"><label>Annual Appreciation (%)</label><input type="number" id="roiRate" value="8" min="1" max="30" step="0.5" oninput="calcROI()"/></div>
+      <table class="roi-table"><thead><tr><th>Year</th><th>Projected Value</th><th>Total Gain</th><th>Gain %</th></tr></thead><tbody id="roiBody"><tr><td colspan="4" class="compare-empty">Run an estimate first.</td></tr></tbody></table>
+    </div>
+    <div id="tab-depreciation" style="display:none;">
+      <div class="section-label">Value vs Age Depreciation Curve</div>
+      <div class="dep-chart-wrap"><canvas id="depChart"></canvas></div>
+    </div>
+    <div id="tab-benchmark" style="display:none;">
+      <div class="section-label">Price/Marla vs Pakistan Cities</div>
+      <div class="benchmark-wrap" id="benchmarkWrap"></div>
+    </div>
+    <div id="tab-affordability" style="display:none;">
+      <div class="section-label">Affordability Index</div>
+      <div class="afford-salary-field"><label>Monthly Salary (PKR)</label><input type="number" id="salaryInput" value="150000" step="10000" oninput="calcAffordability()"/></div>
+      <div class="afford-months" id="affordMonths">—</div>
+      <div class="afford-sub" id="affordSub">months of salary needed</div>
+      <div class="afford-bar-wrap"><div class="afford-label-row"><span>Affordable</span><span>Moderate</span><span>Expensive</span></div><div class="afford-bar-bg"><div class="afford-bar-fill" id="affordBar" style="width:0%;background:var(--success);"></div></div></div>
+    </div>
+    <div id="tab-compare" style="display:none;">
+      <div class="section-label">Saved Property Comparison</div>
+      <div class="compare-wrap"><table class="compare-table"><thead><tr><th>#</th><th>City</th><th>Type</th><th>Size</th><th>Beds</th><th>Age</th><th>Value</th><th></th></tr></thead><tbody id="compareBody"><tr><td colspan="8" class="compare-empty">Save estimates to compare.</td></tr></tbody></table></div>
+    </div>
+    <div id="tab-history" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div class="section-label" style="margin-bottom:0;flex:1;">Estimate History</div>
+        <button class="reset-btn" style="width:auto;padding:6px 14px;flex:none;" onclick="clearHistory()">Clear All</button>
+      </div>
+      <div class="history-list" id="historyList"><div class="hist-empty">No estimates yet.</div></div>
+    </div>
+  </div>
+</main>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeOnOutside(event)" role="dialog" aria-modal="true" aria-labelledby="modalTitleText">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitleText" data-i18n="detailedSummary">Detailed Summary</div>
+      <button class="close-btn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section">
+        <div class="modal-section-title" data-i18n="taxBreakdown">Tax Breakdown</div>
+        <div class="tax-row"><span class="t-label" data-i18n="propValue">Property Value</span><span class="t-val" id="mPropValue">—</span></div>
+        <div class="tax-row"><span class="t-label" data-i18n="transferTax">Transfer Tax (2%)</span><span class="t-val" id="mTransfer">—</span></div>
+        <div class="tax-row"><span class="t-label" data-i18n="agencyFee">Agency Fee (1%)</span><span class="t-val" id="mAgency">—</span></div>
+        <div class="tax-row total"><span class="t-label" data-i18n="totalCost">Total Cost</span><span class="t-val" id="mTotal">—</span></div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title" data-i18n="currencyConversion">Currency Conversion</div>
+        <div class="currency-grid">
+          <div class="currency-card"><div class="currency-flag">🇺🇸</div><div class="currency-code">USD</div><div class="currency-amount" id="cUSD">—</div></div>
+          <div class="currency-card"><div class="currency-flag">🇬🇧</div><div class="currency-code">GBP</div><div class="currency-amount" id="cGBP">—</div></div>
+          <div class="currency-card"><div class="currency-flag">🇪🇺</div><div class="currency-code">EUR</div><div class="currency-amount" id="cEUR">—</div></div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:-8px;" data-i18n="staticRates">* Currency rates are static approximations. 1 PKR ≈ 0.0036 USD · 0.0028 GBP · 0.0033 EUR</div>
+      <div class="modal-section" style="margin-top:1.5rem;">
+        <div class="modal-section-title">QR Code — Share This Estimate</div>
+        <div class="qr-wrap"><div id="qrcode"></div><div style="font-size:12px;color:var(--muted);">Scan to open this estimate</div></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-pdf" onclick="downloadPDF()">⬇ Download PDF</button>
+      <button class="btn-whatsapp" onclick="shareWhatsApp()">📱 WhatsApp</button>
+      <button class="btn-close-modal" onclick="closeModal()" data-i18n="close">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<footer class="footer"><span data-i18n="footer">© 2025 EstimAI · Property Value Estimator · Pakistan</span></footer>
+
+<script>
+// i18n
+const i18n={en:{heroTag:"AI-Powered Estimation",heroH1:"Find your property's <em>true value</em>",heroP:"Real-time estimates for Pakistan's property market. Instant breakdown, tax summary, and PDF export.",propertyDetails:"Property Details",propType:"Property Type",city:"City / Area",size:"Property Size (Marla)",bedrooms:"Bedrooms",bathrooms:"Bathrooms",propAge:"Property Age (Years):",placeholderText:"Adjust the inputs to see your estimated property value",estimatedValue:"Estimated Value",viewSummary:"View Detailed Summary",chartTitle:"Price Breakdown Analysis",landCost:"Land Cost",constructionVal:"Construction Value",detailedSummary:"Detailed Summary",taxBreakdown:"Tax Breakdown",propValue:"Property Value",transferTax:"Transfer Tax (2%)",agencyFee:"Agency Fee (1%)",totalCost:"Total Cost",currencyConversion:"Currency Conversion",staticRates:"* Currency rates are static approximations. 1 PKR ≈ 0.0036 USD · 0.0028 GBP · 0.0033 EUR",downloadPDF:"⬇ Download PDF",close:"Close",footer:"© 2025 EstimAI · Property Value Estimator · Pakistan",basePrice:"Base Price",ageDeduction:"Age Deduction (−10%)",bedroomBonus:"Bedroom Bonus (+5%)",typeBonus:"Type Multiplier"},ur:{heroTag:"AI سے چلنے والا تخمینہ",heroH1:"اپنی جائیداد کی <em>اصل قیمت</em> جانیں",heroP:"پاکستان کی جائیداد مارکیٹ کا فوری تخمینہ۔",propertyDetails:"جائیداد کی تفصیلات",propType:"جائیداد کی قسم",city:"شہر / علاقہ",size:"جائیداد کا رقبہ (مرلہ)",bedrooms:"بیڈ رومز",bathrooms:"باتھ رومز",propAge:"جائیداد کی عمر (سال):",placeholderText:"تخمینہ دیکھنے کے لیے معلومات درج کریں",estimatedValue:"تخمینہ قیمت",viewSummary:"تفصیلی خلاصہ دیکھیں",chartTitle:"قیمت کا تجزیہ",landCost:"زمین کی قیمت",constructionVal:"تعمیراتی قدر",detailedSummary:"تفصیلی خلاصہ",taxBreakdown:"ٹیکس تفصیل",propValue:"جائیداد کی قیمت",transferTax:"ٹرانسفر ٹیکس (2٪)",agencyFee:"ایجنسی فیس (1٪)",totalCost:"کل لاگت",currencyConversion:"کرنسی تبادلہ",staticRates:"* شرح تبادلہ تخمینی ہے۔",downloadPDF:"⬇ PDF ڈاؤن لوڈ کریں",close:"بند کریں",footer:"© 2025 EstimAI · جائیداد قدر تخمینہ · پاکستان",basePrice:"بنیادی قیمت",ageDeduction:"عمر کٹوتی (−10٪)",bedroomBonus:"بیڈ روم بونس (+5٪)",typeBonus:"قسم ضرب"},zh:{heroTag:"AI 驱动估价",heroH1:"发现您房产的<em>真实价值</em>",heroP:"巴基斯坦房地产市场实时估价。",propertyDetails:"房产详情",propType:"房产类型",city:"城市/区域",size:"房产面积（Marla）",bedrooms:"卧室数",bathrooms:"浴室数",propAge:"房龄（年）:",placeholderText:"调整参数以查看估计价值",estimatedValue:"估计价值",viewSummary:"查看详细摘要",chartTitle:"价格分析",landCost:"土地费用",constructionVal:"建设价值",detailedSummary:"详细摘要",taxBreakdown:"税务明细",propValue:"房产价值",transferTax:"过户税（2%）",agencyFee:"中介费（1%）",totalCost:"总费用",currencyConversion:"货币换算",staticRates:"* 汇率为近似静态值。",downloadPDF:"⬇ 下载PDF",close:"关闭",footer:"© 2025 EstimAI · 房产估价 · 巴基斯坦",basePrice:"基础价格",ageDeduction:"房龄折扣",bedroomBonus:"卧室加成",typeBonus:"类型系数"},ar:{heroTag:"تقدير بالذكاء الاصطناعي",heroH1:"اكتشف <em>القيمة الحقيقية</em> لعقارك",heroP:"تقديرات فورية لسوق العقارات الباكستاني.",propertyDetails:"تفاصيل العقار",propType:"نوع العقار",city:"المدينة / المنطقة",size:"مساحة العقار (مارلا)",bedrooms:"غرف النوم",bathrooms:"الحمامات",propAge:"عمر العقار (سنوات):",placeholderText:"اضبط المدخلات لرؤية قيمة العقار",estimatedValue:"القيمة التقديرية",viewSummary:"عرض الملخص التفصيلي",chartTitle:"تحليل السعر",landCost:"تكلفة الأرض",constructionVal:"قيمة البناء",detailedSummary:"الملخص التفصيلي",taxBreakdown:"تفاصيل الضريبة",propValue:"قيمة العقار",transferTax:"ضريبة النقل (2٪)",agencyFee:"رسوم الوكالة (1٪)",totalCost:"التكلفة الإجمالية",currencyConversion:"تحويل العملة",staticRates:"* الأسعار تقريبية.",downloadPDF:"⬇ تنزيل PDF",close:"إغلاق",footer:"© 2025 EstimAI · تقدير العقار · باكستان",basePrice:"السعر الأساسي",ageDeduction:"خصم العمر",bedroomBonus:"مكافأة غرف النوم",typeBonus:"معامل النوع"}};
+let lang='en';
+function setLang(l){lang=l;const rtl=['ur','ar'];document.documentElement.lang=l;document.documentElement.dir=rtl.includes(l)?'rtl':'ltr';const t=i18n[l];document.querySelectorAll('[data-i18n]').forEach(el=>{const k=el.getAttribute('data-i18n');if(t[k]!==undefined)el.innerHTML=t[k];});calculate();}
+
+// Theme
+function toggleTheme(){const html=document.documentElement;const dark=html.getAttribute('data-theme')==='dark';html.setAttribute('data-theme',dark?'light':'dark');document.getElementById('themeBtn').textContent=dark?'🌙':'☀️';if(chart)updateChart();if(depChartInst)buildDepreciationChart();}
+
+// Data
+const CITY_MULT={'Islamabad_F7':1.4,'Islamabad_DHA':1.35,'Islamabad_G11':1.0,'Lahore_DHA':1.3,'Lahore_Gulberg':1.25,'Lahore_Bahria':1.1,'Karachi_DHA':1.35,'Karachi_Clifton':1.3,'Rawalpindi':0.85,'Peshawar':0.75,'Faisalabad':0.80,'Multan':0.72,'Quetta':0.70};
+const CITY_LBL={'Islamabad_F7':'F-7 Isb','Islamabad_DHA':'DHA Isb','Islamabad_G11':'G-11 Isb','Lahore_DHA':'DHA Lhr','Lahore_Gulberg':'Gulberg','Lahore_Bahria':'Bahria Lhr','Karachi_DHA':'DHA Khi','Karachi_Clifton':'Clifton','Rawalpindi':'Rawalpindi','Peshawar':'Peshawar','Faisalabad':'Faisalabad','Multan':'Multan','Quetta':'Quetta'};
+const CITY_AVG={'Islamabad_F7':7000000,'Islamabad_DHA':6750000,'Islamabad_G11':5000000,'Lahore_DHA':6500000,'Lahore_Gulberg':6250000,'Lahore_Bahria':5500000,'Karachi_DHA':6750000,'Karachi_Clifton':6500000,'Rawalpindi':4250000,'Peshawar':3750000,'Faisalabad':4000000,'Multan':3600000,'Quetta':3500000};
+const TYPE_MULT={house:1.0,apartment:0.85,plot:0.7,commercial:1.4};
+const RATES={USD:0.0036,GBP:0.0028,EUR:0.0033};
+const BASE=5000000;
+let beds=3,baths=2,propType='house';
+let lastValue=0,calculated=false,firstEstimate=true;
+let compareList=[];
+let depChartInst=null;
+
+function fmt(n){return '₨ '+Math.round(n).toLocaleString('en-PK');}
+function fmtS(n){if(n>=1e7)return '₨'+(n/1e7).toFixed(1)+'Cr';if(n>=1e5)return '₨'+(n/1e5).toFixed(1)+'L';return fmt(n);}
+
+// Steppers
+function step(type,d){if(type==='beds'){beds=Math.max(1,Math.min(20,beds+d));document.getElementById('bedsVal').textContent=beds;}else{baths=Math.max(1,Math.min(20,baths+d));document.getElementById('bathsVal').textContent=baths;}calculate();}
+
+// Type
+function setType(btn){document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');propType=btn.getAttribute('data-type');calculate();}
+
+// Slider
+function updateSlider(el){const pct=((el.value-el.min)/(el.max-el.min))*100;el.style.setProperty('--val',pct+'%');document.getElementById('ageSliderVal').textContent=el.value;}
+updateSlider(document.getElementById('age'));
+
+// Validate
+function validate(){const sz=parseFloat(document.getElementById('size').value);const el=document.getElementById('size');if(!sz||sz<=0||sz>5000){el.classList.add('invalid');showToast('Please enter a valid size (1–5000 Marla).','error');return false;}el.classList.remove('invalid');return true;}
+
+// CALCULATE
+function calculate(){
+  if(!validate())return;
+  const size=parseFloat(document.getElementById('size').value)||0;
+  const age=parseInt(document.getElementById('age').value)||0;
+  const ck=document.getElementById('city').value;
+  const cm=CITY_MULT[ck]||1;
+  const tm=TYPE_MULT[propType]||1;
+  const t=i18n[lang];
+  const base=size*BASE*cm*tm;
+  const ded=age>10?base*0.10:0;
+  const bon=beds>3?base*0.05:0;
+  const final=base-ded+bon;
+  document.getElementById('placeholder').style.display='none';
+  document.getElementById('resultContent').classList.add('active');
+  animatePrice(lastValue,final);
+  lastValue=final;calculated=true;
+  const lbl=CITY_LBL[ck]||ck;
+  document.getElementById('cityName').textContent=lbl+' · '+propType.charAt(0).toUpperCase()+propType.slice(1);
+  const bd=document.getElementById('breakdown');
+  bd.innerHTML=`<div class="breakdown-item"><span class="b-label">${t.basePrice} (${lbl})</span><span class="b-val">${fmt(base)}</span></div>${ded>0?`<div class="breakdown-item negative"><span class="b-label">${t.ageDeduction}</span><span class="b-val">−${fmt(ded)}</span></div>`:''}${bon>0?`<div class="breakdown-item positive"><span class="b-label">${t.bedroomBonus}</span><span class="b-val">+${fmt(bon)}</span></div>`:''}${tm!==1?`<div class="breakdown-item"><span class="b-label">${t.typeBonus} ×${tm}</span><span class="b-val">${fmtS(base/tm*(tm-1))}</span></div>`:''}`;
+  document.getElementById('summaryBtn').disabled=false;
+  updateInsights(final,size,ck);
+  updateChart(base,final);
+  buildListings(ck,size,final);
+  calcMortgage();calcROI();buildDepreciationChart();buildBenchmark();calcAffordability();
+  saveToHistory(lbl,final);
+  if(firstEstimate){firstEstimate=false;launchConfetti();showToast('🏠 Estimate ready! Explore tabs below.','success');}
+  updateURL();
+}
+
+// Insights
+function updateInsights(val,size,ck){
+  document.getElementById('insightsStrip').style.display='grid';
+  const ppm=Math.round(val/size);const avg=CITY_AVG[ck]||5000000;
+  const d=((ppm-avg)/avg*100).toFixed(1);
+  document.getElementById('iPPM').textContent=fmtS(ppm);
+  const sub=document.getElementById('iPPMsub');sub.textContent=(d>0?'+':'')+d+'% vs city avg';sub.style.color=d>0?'var(--success)':'var(--danger)';
+  const rent=val*0.004;const yld=((rent*12)/val*100).toFixed(1);
+  document.getElementById('iRent').textContent=fmtS(rent);document.getElementById('iYield').textContent=yld+'% annual yield';
+  const sal=parseInt(document.getElementById('salaryInput')?.value)||150000;
+  document.getElementById('iMonths').textContent=Math.round(val/sal);
+  document.getElementById('i5yr').textContent=fmtS(val*Math.pow(1.08,5));
+}
+
+// Animate price
+let animFrame;
+function animatePrice(from,to){
+  cancelAnimationFrame(animFrame);const el=document.getElementById('priceDisplay');const dur=600;const st=performance.now();
+  function go(now){const p=Math.min((now-st)/dur,1);const e=1-Math.pow(1-p,3);el.textContent='₨ '+Math.round(from+(to-from)*e).toLocaleString('en-PK');if(p<1)animFrame=requestAnimationFrame(go);}
+  animFrame=requestAnimationFrame(go);
+}
+
+// Main chart
+let chart;
+function updateChart(base,final){
+  const acc=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  const suc=getComputedStyle(document.documentElement).getPropertyValue('--success').trim();
+  const txt=getComputedStyle(document.documentElement).getPropertyValue('--muted').trim();
+  const brd=getComputedStyle(document.documentElement).getPropertyValue('--border').trim();
+  const data=[Math.round((base||0)*0.6),Math.round(final?(final-(base||0)*0.6):0)];
+  if(!chart){const ctx=document.getElementById('myChart').getContext('2d');chart=new Chart(ctx,{type:'bar',data:{labels:['Land Cost','Construction Value'],datasets:[{data,backgroundColor:[acc,suc],borderRadius:8,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:d=>'₨ '+Math.round(d.raw).toLocaleString('en-PK')}}},scales:{x:{grid:{display:false},ticks:{color:txt,font:{family:'DM Sans'}}},y:{grid:{color:brd},ticks:{color:txt,font:{family:'DM Sans'},callback:v=>'₨ '+Math.round(v/1000000)+'M'}}}}});}
+  else{chart.data.datasets[0].data=data;chart.data.datasets[0].backgroundColor=[acc,suc];chart.options.scales.x.ticks.color=txt;chart.options.scales.y.ticks.color=txt;chart.options.scales.y.grid.color=brd;chart.update('active');}
+}
+updateChart(0,0);
+
+// Comparable listings
+const LNAMES=['Green Vista','Pearl Heights','City Corner','Prime Estate','Horizon View','Blue Lagoon','Golden Gate'];
+const LEMOJI=['🏡','🏘️','🏗️','🌇','🏛️','🌊','🏠'];
+function buildListings(ck,size,val){
+  const g=document.getElementById('listingsGrid');g.innerHTML='';
+  for(let i=0;i<5;i++){
+    const diff=Math.random()*0.3-0.1;const lv=Math.round(val*(1+diff));
+    const ls=+(size*(0.8+Math.random()*0.5)).toFixed(1);const lb=Math.max(1,beds+(Math.floor(Math.random()*3)-1));
+    const label=diff>0.05?'Pricier':diff<-0.05?'Cheaper':'Similar';
+    const cls=label==='Pricier'?'badge-pricier':label==='Cheaper'?'badge-cheaper':'badge-similar';
+    g.innerHTML+=`<div class="listing-card"><div class="listing-img">${LEMOJI[i]}</div><span class="listing-badge ${cls}">${label}</span><div class="listing-name">${LNAMES[i]}</div><div class="listing-detail">${ls} Mrl · ${lb} Beds · ${CITY_LBL[ck]||ck}</div><div class="listing-price">${fmtS(lv)}</div></div>`;
+  }
+}
+
+// Mortgage
+function calcMortgage(){
+  if(!calculated){document.getElementById('mortSub').textContent='Run an estimate first.';return;}
+  const pv=lastValue;document.getElementById('mortPropVal').value=Math.round(pv);
+  const dp=parseFloat(document.getElementById('downPct').value)||20;
+  const yr=parseInt(document.getElementById('loanYears').value)||20;
+  const rt=parseFloat(document.getElementById('interestRate').value)||18;
+  const loan=pv*(1-dp/100);const mr=rt/100/12;const n=yr*12;
+  const mo=loan*(mr*Math.pow(1+mr,n))/(Math.pow(1+mr,n)-1);
+  document.getElementById('mortMonthly').textContent=fmt(mo);
+  document.getElementById('mortSub').textContent=`Loan: ${fmt(loan)} · ${yr}yrs @ ${rt}% · Down: ${fmt(pv*dp/100)}`;
+}
+
+// ROI
+function calcROI(){
+  if(!calculated){document.getElementById('roiBody').innerHTML='<tr><td colspan="4" class="compare-empty">Run an estimate first.</td></tr>';return;}
+  const rt=parseFloat(document.getElementById('roiRate').value)||8;
+  let rows='';[1,3,5,10,15].forEach(y=>{const proj=lastValue*Math.pow(1+rt/100,y);const gain=proj-lastValue;rows+=`<tr><td>${y}yr${y>1?'s':''}</td><td>${fmtS(proj)}</td><td class="roi-positive">+${fmtS(gain)}</td><td class="roi-positive">+${((gain/lastValue)*100).toFixed(1)}%</td></tr>`;});
+  document.getElementById('roiBody').innerHTML=rows;
+}
+
+// Depreciation chart
+function buildDepreciationChart(){
+  const sz=parseFloat(document.getElementById('size').value)||10;
+  const ck=document.getElementById('city').value;
+  const bppm=CITY_AVG[ck]||5000000;const nv=sz*bppm;
+  const labs=[],data=[];
+  for(let a=0;a<=50;a+=5){labs.push(a+'yr');data.push(Math.round(a>10?nv*0.9:nv));}
+  const acc=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  const txt=getComputedStyle(document.documentElement).getPropertyValue('--muted').trim();
+  const brd=getComputedStyle(document.documentElement).getPropertyValue('--border').trim();
+  const ctx=document.getElementById('depChart').getContext('2d');
+  if(depChartInst)depChartInst.destroy();
+  depChartInst=new Chart(ctx,{type:'line',data:{labels:labs,datasets:[{data,borderColor:acc,backgroundColor:acc+'22',fill:true,tension:0.3,borderWidth:2,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:d=>'₨ '+Math.round(d.raw).toLocaleString('en-PK')}}},scales:{x:{grid:{display:false},ticks:{color:txt,font:{family:'DM Sans'}}},y:{grid:{color:brd},ticks:{color:txt,font:{family:'DM Sans'},callback:v=>'₨'+(v/1000000).toFixed(0)+'M'}}}}});
+}
+
+// Benchmark
+function buildBenchmark(){
+  const ck=document.getElementById('city').value;
+  const sz=parseFloat(document.getElementById('size').value)||10;
+  const userPPM=calculated?Math.round(lastValue/sz):0;
+  const all=Object.entries(CITY_AVG).sort((a,b)=>b[1]-a[1]);
+  const max=all[0][1];
+  let html=all.map(([k,ppm])=>{const w=Math.round((ppm/max)*100);const isU=k===ck;return `<div class="bench-row"><span class="bench-city">${CITY_LBL[k]||k}</span><div class="bench-bar-bg"><div class="bench-bar-fill ${isU?'user-bar':''}" style="width:${w}%"></div></div><span class="bench-val">${fmtS(ppm)}</span></div>`;}).join('');
+  if(calculated)html+=`<div class="bench-row" style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;"><span class="bench-city" style="color:var(--success);font-weight:600;">Your est.</span><div class="bench-bar-bg"><div class="bench-bar-fill user-bar" style="width:${Math.min(100,Math.round((userPPM/max)*100))}%"></div></div><span class="bench-val" style="color:var(--success);">${fmtS(userPPM)}</span></div>`;
+  document.getElementById('benchmarkWrap').innerHTML=html;
+}
+buildBenchmark();
+
+// Affordability
+function calcAffordability(){
+  const sal=parseInt(document.getElementById('salaryInput').value)||150000;
+  if(!calculated){return;}
+  const mo=Math.round(lastValue/sal);
+  document.getElementById('affordMonths').textContent=mo.toLocaleString();
+  document.getElementById('affordSub').textContent=`months of ₨${sal.toLocaleString()} monthly salary`;
+  document.getElementById('iMonths').textContent=mo;
+  const pct=Math.min(100,Math.round((mo/360)*100));
+  const bar=document.getElementById('affordBar');bar.style.width=pct+'%';
+  bar.style.background=mo<120?'var(--success)':mo<240?'var(--accent)':'var(--danger)';
+}
+
+// Save & Compare
+function saveToCompare(){
+  if(!calculated){showToast('Run an estimate first!','error');return;}
+  if(compareList.length>=5){showToast('Max 5 estimates. Remove one first.','error');return;}
+  const ck=document.getElementById('city').value;const sz=parseFloat(document.getElementById('size').value);const ag=parseInt(document.getElementById('age').value);
+  compareList.push({id:Date.now(),city:CITY_LBL[ck]||ck,type:propType,size:sz,beds,age:ag,value:lastValue});
+  renderCompare();showToast('Saved to comparison!','success');
+}
+function removeCompare(id){compareList=compareList.filter(x=>x.id!==id);renderCompare();}
+function renderCompare(){
+  const tb=document.getElementById('compareBody');if(!compareList.length){tb.innerHTML='<tr><td colspan="8" class="compare-empty">Save estimates to compare.</td></tr>';return;}
+  const mx=Math.max(...compareList.map(x=>x.value));
+  tb.innerHTML=compareList.map((x,i)=>`<tr><td>${i+1}</td><td>${x.city}</td><td style="text-transform:capitalize;">${x.type}</td><td>${x.size}Mrl</td><td>${x.beds}</td><td>${x.age}yr</td><td class="${x.value===mx?'highlight':''}">${fmtS(x.value)}</td><td><button class="compare-del" onclick="removeCompare(${x.id})">✕</button></td></tr>`).join('');
+}
+
+// History
+function saveToHistory(city,val){
+  try{let h=JSON.parse(localStorage.getItem('estimai_h')||'[]');h.unshift({city,type:propType,size:parseFloat(document.getElementById('size').value),beds,age:parseInt(document.getElementById('age').value),value:val,ts:Date.now()});localStorage.setItem('estimai_h',JSON.stringify(h.slice(0,20)));renderHistory();}catch(e){}
+}
+function renderHistory(){
+  try{const h=JSON.parse(localStorage.getItem('estimai_h')||'[]');const l=document.getElementById('historyList');if(!h.length){l.innerHTML='<div class="hist-empty">No estimates yet.</div>';return;}l.innerHTML=h.map((x,i)=>`<div class="history-item" onclick="loadHistory(${i})"><div class="hist-left"><div class="hist-city">${x.city} · ${x.type}</div><div class="hist-detail">${x.size}Mrl · ${x.beds}Beds · ${x.age}yr</div></div><div class="hist-right"><div class="hist-price">${fmtS(x.value)}</div><div class="hist-time">${new Date(x.ts).toLocaleDateString()}</div></div><button class="hist-del" onclick="event.stopPropagation();delHistory(${i})">✕</button></div>`).join('');}catch(e){}
+}
+function delHistory(i){try{let h=JSON.parse(localStorage.getItem('estimai_h')||'[]');h.splice(i,1);localStorage.setItem('estimai_h',JSON.stringify(h));renderHistory();}catch(e){}}
+function clearHistory(){try{localStorage.removeItem('estimai_h');renderHistory();showToast('History cleared.','info');}catch(e){}}
+function loadHistory(i){
+  try{const h=JSON.parse(localStorage.getItem('estimai_h')||'[]');const x=h[i];if(!x)return;
+  beds=x.beds;baths=2;document.getElementById('bedsVal').textContent=beds;document.getElementById('bathsVal').textContent=baths;
+  document.getElementById('size').value=x.size;document.getElementById('age').value=x.age;document.getElementById('ageDisplay').textContent=x.age;
+  updateSlider(document.getElementById('age'));propType=x.type;
+  document.querySelectorAll('.type-btn').forEach(b=>b.classList.toggle('active',b.getAttribute('data-type')===x.type));
+  calculate();showToast('Loaded from history!','info');}catch(e){}
+}
+renderHistory();
+
+// URL Share
+function updateURL(){try{const p=new URLSearchParams();p.set('city',document.getElementById('city').value);p.set('size',document.getElementById('size').value);p.set('beds',beds);p.set('baths',baths);p.set('age',document.getElementById('age').value);p.set('type',propType);history.replaceState(null,'','?'+p.toString());}catch(e){}}
+function shareLink(){const url=window.location.href;if(navigator.clipboard){navigator.clipboard.writeText(url).then(()=>showToast('Link copied!','success'));}else{showToast('Copy: '+url,'info');}}
+(function loadURL(){try{const p=new URLSearchParams(window.location.search);if(p.get('city')){const s=document.getElementById('city');for(let o of s.options)if(o.value===p.get('city')){s.value=p.get('city');break;}}if(p.get('size'))document.getElementById('size').value=p.get('size');if(p.get('beds')){beds=parseInt(p.get('beds'));document.getElementById('bedsVal').textContent=beds;}if(p.get('baths')){baths=parseInt(p.get('baths'));document.getElementById('bathsVal').textContent=baths;}if(p.get('age')){document.getElementById('age').value=p.get('age');document.getElementById('ageDisplay').textContent=p.get('age');updateSlider(document.getElementById('age'));}if(p.get('type')){propType=p.get('type');document.querySelectorAll('.type-btn').forEach(b=>b.classList.toggle('active',b.getAttribute('data-type')===propType));}}catch(e){}})();
+
+// Reset
+function resetForm(){document.getElementById('city').value='Islamabad_F7';document.getElementById('size').value='10';document.getElementById('age').value='5';document.getElementById('ageDisplay').textContent='5';updateSlider(document.getElementById('age'));beds=3;baths=2;propType='house';document.getElementById('bedsVal').textContent=3;document.getElementById('bathsVal').textContent=2;document.querySelectorAll('.type-btn').forEach(b=>b.classList.toggle('active',b.getAttribute('data-type')==='house'));lastValue=0;calculated=false;firstEstimate=true;document.getElementById('placeholder').style.display='flex';document.getElementById('resultContent').classList.remove('active');document.getElementById('summaryBtn').disabled=true;document.getElementById('insightsStrip').style.display='none';showToast('Form reset.','info');try{history.replaceState(null,'',window.location.pathname);}catch(e){}}
+
+// Tabs
+function showTab(name,btn){document.querySelectorAll('[id^="tab-"]').forEach(el=>el.style.display='none');document.getElementById('tab-'+name).style.display='block';document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');if(name==='depreciation')buildDepreciationChart();if(name==='benchmark')buildBenchmark();if(name==='mortgage')calcMortgage();if(name==='roi')calcROI();if(name==='affordability')calcAffordability();}
+
+// Modal
+function openModal(){
+  if(!calculated)return;
+  const v=lastValue;const tf=v*0.02,ag=v*0.01,tot=v+tf+ag;
+  document.getElementById('mPropValue').textContent=fmt(v);document.getElementById('mTransfer').textContent=fmt(tf);document.getElementById('mAgency').textContent=fmt(ag);document.getElementById('mTotal').textContent=fmt(tot);
+  document.getElementById('cUSD').textContent='$'+Math.round(v*RATES.USD).toLocaleString();document.getElementById('cGBP').textContent='£'+Math.round(v*RATES.GBP).toLocaleString();document.getElementById('cEUR').textContent='€'+Math.round(v*RATES.EUR).toLocaleString();
+  const qe=document.getElementById('qrcode');qe.innerHTML='';
+  try{new QRCode(qe,{text:window.location.href,width:120,height:120,colorDark:'#1a1714',colorLight:'#ffffff'});}catch(e){}
+  document.getElementById('modalOverlay').classList.add('open');document.body.style.overflow='hidden';
+}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('open');document.body.style.overflow='';}
+function closeOnOutside(e){if(e.target===document.getElementById('modalOverlay'))closeModal();}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+// WhatsApp
+function shareWhatsApp(){if(!calculated){showToast('Run an estimate first!','error');return;}const ck=document.getElementById('city').value;const sz=document.getElementById('size').value;const ag=document.getElementById('age').value;const msg=`🏠 *EstimAI Property Estimate*\n\n📍 ${CITY_LBL[ck]||ck} (${propType})\n📐 ${sz} Marla · 🛏 ${beds} Beds · 🚿 ${baths} Baths · 🕰 ${ag} yrs\n\n💰 *Estimated Value: ${fmt(lastValue)}*\n🏦 Transfer Tax: ${fmt(lastValue*0.02)}\n🤝 Agency Fee: ${fmt(lastValue*0.01)}\n\n💵 $${Math.round(lastValue*RATES.USD).toLocaleString()} | £${Math.round(lastValue*RATES.GBP).toLocaleString()} | €${Math.round(lastValue*RATES.EUR).toLocaleString()}\n\nEstimAI · ${window.location.href}`;window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');}
+
+// PDF
+function downloadPDF(){
+  const {jsPDF}=window.jspdf;const doc=new jsPDF();const v=lastValue;
+  const city=CITY_LBL[document.getElementById('city').value]||document.getElementById('city').value;
+  const sz=document.getElementById('size').value;const ag=document.getElementById('age').value;
+  const tf=v*0.02,af=v*0.01,tot=v+tf+af;
+  doc.setFont('helvetica','bold');doc.setFontSize(22);doc.setTextColor(184,150,90);doc.text('EstimAI Property Report',20,25);
+  doc.setFont('helvetica','normal');doc.setFontSize(11);doc.setTextColor(100,100,100);doc.text('Generated: '+new Date().toLocaleDateString(),20,35);
+  doc.setDrawColor(224,219,208);doc.line(20,40,190,40);
+  doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(26,23,20);doc.text('Property Details',20,52);
+  doc.setFont('helvetica','normal');doc.setFontSize(11);doc.text(`City: ${city}  |  Type: ${propType}`,20,62);doc.text(`Size: ${sz} Marla  |  Beds: ${beds}  |  Baths: ${baths}  |  Age: ${ag} years`,20,70);
+  doc.line(20,77,190,77);doc.setFont('helvetica','bold');doc.setFontSize(13);doc.text('Estimated Value',20,89);
+  doc.setFontSize(18);doc.setTextColor(184,150,90);doc.text('PKR '+Math.round(v).toLocaleString(),20,100);
+  doc.setFontSize(11);doc.setTextColor(26,23,20);doc.setFont('helvetica','bold');doc.text('Tax & Fee Breakdown',20,116);doc.setFont('helvetica','normal');
+  [['Property Value','PKR '+Math.round(v).toLocaleString()],['Transfer Tax (2%)','PKR '+Math.round(tf).toLocaleString()],['Agency Fee (1%)','PKR '+Math.round(af).toLocaleString()],['Total Cost','PKR '+Math.round(tot).toLocaleString()]].forEach(([l,r],i)=>{const y=124+i*9;if(i===3){doc.setFont('helvetica','bold');doc.setTextColor(184,150,90);}doc.text(l,20,y);doc.text(r,190,y,{align:'right'});});
+  doc.setFont('helvetica','bold');doc.setTextColor(26,23,20);doc.text('Currency Conversion',20,165);doc.setFont('helvetica','normal');doc.text(`USD: $${Math.round(v*RATES.USD).toLocaleString()}`,20,175);doc.text(`GBP: £${Math.round(v*RATES.GBP).toLocaleString()}`,80,175);doc.text(`EUR: €${Math.round(v*RATES.EUR).toLocaleString()}`,140,175);
+  const rt=parseFloat(document.getElementById('roiRate').value)||8;
+  doc.setFont('helvetica','bold');doc.text('ROI Projections ('+rt+'% p.a.)',20,191);doc.setFont('helvetica','normal');
+  [1,5,10,15].forEach((yr,i)=>{const proj=v*Math.pow(1+rt/100,yr);doc.text(`${yr}yr: PKR ${Math.round(proj).toLocaleString()}`,20+(i>1?90:0),200+(i%2)*9);});
+  doc.setTextColor(150,150,150);doc.setFontSize(9);doc.text('* Static exchange rates. For reference only. EstimAI — Pakistan',20,285);
+  doc.save('EstimAI_Report.pdf');
+}
+
+// Toast
+function showToast(msg,type='info'){const c=document.getElementById('toastContainer');const t=document.createElement('div');t.className=`toast ${type}`;t.textContent=msg;c.appendChild(t);requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),400);},3500);}
+
+// Confetti
+function launchConfetti(){const cols=['#b8965a','#1a7f5a','#c0392b','#3498db','#9b59b6','#f1c40f'];for(let i=0;i<60;i++){const p=document.createElement('div');p.className='confetti-particle';p.style.cssText=`left:${Math.random()*100}vw;background:${cols[~~(Math.random()*cols.length)]};animation-duration:${1.5+Math.random()*2}s;animation-delay:${Math.random()*0.5}s;width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;`;document.body.appendChild(p);setTimeout(()=>p.remove(),3500);}}
+
+// Mouse Trail
+(function(){
+  const cv=document.getElementById('trailCanvas');const ctx=cv.getContext('2d');
+  let W=cv.width=innerWidth,H=cv.height=innerHeight;
+  addEventListener('resize',()=>{W=cv.width=innerWidth;H=cv.height=innerHeight;});
+  const pts=[];
+  document.addEventListener('mousemove',e=>{for(let i=0;i<3;i++)pts.push({x:e.clientX,y:e.clientY,vx:(Math.random()-.5)*2,vy:(Math.random()-.5)*2,life:1,r:3+Math.random()*4,h:40+Math.random()*20});});
+  function loop(){ctx.clearRect(0,0,W,H);for(let i=pts.length-1;i>=0;i--){const p=pts[i];p.x+=p.vx;p.y+=p.vy;p.life-=0.04;p.vy+=0.05;if(p.life<=0){pts.splice(i,1);continue;}ctx.beginPath();ctx.arc(p.x,p.y,p.r*p.life,0,Math.PI*2);ctx.fillStyle=`hsla(${p.h},60%,55%,${p.life*.6})`;ctx.fill();}requestAnimationFrame(loop);}loop();
+})();
+
+calculate();
+</script>
+</body>
+</html>
