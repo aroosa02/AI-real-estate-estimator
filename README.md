@@ -2,6 +2,11 @@
 
 > AI-powered real estate estimation for Pakistan's property market. Instant breakdowns, tax summaries, mortgage calculations, ROI projections, and PDF export — all in a single HTML file.
 
+## 🏆 Recognition
+
+> **Megacode War — HITEC University**
+> Secured **4th Position** overall with a perfect **5/5 score in UI/UX** at the inter-university web development competition.
+
 ![EstimAI Hero](headervideo.mp4)
 
 ---
